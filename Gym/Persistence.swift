@@ -10,48 +10,87 @@ import CoreData
 struct PersistenceController {
     static let shared = PersistenceController()
 
+    // MARK: - Preview
     @MainActor
     static let preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
         let viewContext = result.container.viewContext
-        for _ in 0..<10 {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
+
+        // Seed preview-only membership plans
+        let plans = [
+            ("1 Month", 1, 2000.0),
+            ("3 Months", 3, 4000.0),
+            ("6 Months", 6, 6000.0),
+            ("1 Year", 12, 12000.0)
+        ]
+
+        for (name, duration, price) in plans {
+            let plan = MembershipPlanEntity(context: viewContext)
+            plan.name = name
+            plan.durationInMonths = Int16(duration)
+            plan.price = price
+            plan.isActive = false
         }
+
         do {
             try viewContext.save()
         } catch {
-            // Replace this implementation with code to handle the error appropriately.
-            // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
             let nsError = error as NSError
             fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
         }
         return result
     }()
 
+    // MARK: - Core Data Stack
     let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "Gym")
-        if inMemory {
-            container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
-        }
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+        container = NSPersistentContainer(name: "Gym") // must match your .xcdatamodeld filename
 
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
+        if inMemory {
+            container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
+        }
+
+        container.loadPersistentStores { _, error in
+            if let error = error as NSError? {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }
-        })
+        }
+
         container.viewContext.automaticallyMergesChangesFromParent = true
+
+        // ✅ Seed default membership plans if none exist
+        seedPlansIfNeeded()
+    }
+
+    // MARK: - Seeding Default Data
+    private func seedPlansIfNeeded() {
+        let context = container.viewContext
+        let fetchRequest: NSFetchRequest<MembershipPlanEntity> = MembershipPlanEntity.fetchRequest()
+
+        do {
+            let count = try context.count(for: fetchRequest)
+            if count == 0 {
+                let plans = [
+                    ("1 Month", 1, 2000.0),
+                    ("3 Months", 3, 4000.0),
+                    ("6 Months", 6, 6000.0),
+                    ("1 Year", 12, 12000.0)
+                ]
+
+                for (name, duration, price) in plans {
+                    let plan = MembershipPlanEntity(context: context)
+                    plan.name = name
+                    plan.durationInMonths = Int16(duration)
+                    plan.price = price
+                    plan.isActive = false
+                }
+
+                try context.save()
+                print("✅ Default membership plans seeded")
+            }
+        } catch {
+            print("❌ Failed to seed membership plans: \(error.localizedDescription)")
+        }
     }
 }
