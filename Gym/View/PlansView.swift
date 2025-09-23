@@ -11,15 +11,24 @@ import CoreData
 struct PlansView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @ObservedObject var vm: GymViewModel
-    @FetchRequest( sortDescriptors: [NSSortDescriptor(keyPath: \MembershipPlanEntity.name, ascending: true)], animation: .default )
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(keyPath: \MembershipPlanEntity.name, ascending: true)],
+        animation: .default
+    )
     private var plans: FetchedResults<MembershipPlanEntity>
+    
+    @State private var selectedStartDate = Date()
+    @State private var selectedPlan: MembershipPlanEntity?
+    @State private var showDatePicker = false
+    
     var body: some View {
         NavigationView {
             List {
-                ForEach(plans) {
-                    plan in
+                ForEach(plans) { plan in
                     Button(action: {
-                        vm.setMembership(plan: plan)
+                        selectedPlan = plan
+                        selectedStartDate = Date()
+                        showDatePicker = true
                     }) {
                         HStack {
                             VStack(alignment: .leading) {
@@ -39,9 +48,38 @@ struct PlansView: View {
                 }
             }
             .navigationTitle("Membership Plans")
+            .sheet(isPresented: $showDatePicker) {
+                VStack(spacing: 20) {
+                    Text("Select Start Date for \(selectedPlan?.name ?? "")")
+                        .font(.headline)
+                    
+                    DatePicker(
+                        "Start Date",
+                        selection: $selectedStartDate,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.graphical)
+                    
+                    Button("Confirm") {
+                        if let plan = selectedPlan {
+                            plan.startDate = selectedStartDate
+                            vm.setMembership(plan: plan)
+                            vm.save()
+                        }
+                        showDatePicker = false
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue.opacity(0.8))
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                }
+                .padding()
+            }
         }
     }
 }
+
 //#Preview {
 //    PlansView()
 //}
