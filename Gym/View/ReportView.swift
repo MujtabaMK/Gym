@@ -26,27 +26,20 @@ struct ReportView: View {
         NavigationView {
             List {
                 if let plan = activePlans.first {
-                    // ✅ Present Count
                     Section(header: Text("Present")) {
                         HStack {
                             Text("Present:")
                             Spacer()
-                            Text("\(attendance.count)")
+                            Text("\(vm.presentCount(for: plan))")
                         }
                     }
-                    
-                    // ✅ Absent Count
-                    if let startDate = plan.startDate {
-                        let totalDays = Calendar.current.dateComponents([.day], from: startDate, to: Date()).day ?? 0
-                        let absentDays = max(totalDays + 1 - attendance.count, 0) // +1 to include start day
-                        
-                        Section(header: Text("Absent")) {
-                            HStack {
-                                Text("Absent:")
-                                Spacer()
-                                Text("\(absentDays)")
-                                    .foregroundColor(.red)
-                            }
+
+                    Section(header: Text("Absent")) {
+                        HStack {
+                            Text("Absent:")
+                            Spacer()
+                            Text("\(vm.absentDays(for: plan))")
+                                .foregroundColor(.red)
                         }
                     }
                     
