@@ -20,6 +20,11 @@ struct ContentView: View {
     
     var body: some View {
         TabView {
+            HomeWorkoutView()
+                .tabItem {
+                    Label("Home", systemImage: "house.fill")
+                }
+            
             PlansView(vm: vm)
                 .tabItem {
                     Label("Plans", systemImage: "creditcard")
